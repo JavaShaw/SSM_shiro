@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:aop="http://www.springframework.org/schema/aop" xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
+				http://www.springframework.org/schema/context
+				 http://www.springframework.org/schema/context/spring-context-3.2.xsd
+				http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-3.2.xsd
+				 http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd">
+  
+    <!--安全管理器-->
+    <bean id="securityManager" class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
+        <!--注入认证授权realm-->
+        <property name="realm" ref="customRealm"/>
+        <!-- 在安全管理器中注入缓存管理器 -->
+        <property name="cacheManager" ref="cacheManager"/>
+    </bean>
+
+    <!--shiro过滤器-->
+    <bean id="shiroFilter" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
+        <!--注入安全管理器-->
+        <property name="securityManager" ref="securityManager"/>
+        <!--没有登录的时候，跳转到这个页面-->
+        <property name="loginUrl" value="/user/login"/>
+        <!--无权限跳转页面-->
+        <property name="unauthorizedUrl" value="/user/nopermission"/>
+        <!--过滤器链,优先级从上往下-->
+        <property name="filterChainDefinitions">
+            <value>
+                <!--anno表示不需要登录就可以访问-->
+                /user/login = anon
+                <!-- 验证码，可匿名访问 -->
+                /validatecode.jsp** = anon
+                <!--/user/createCode= anon-->
+                <!--auhtc表示需要认证才能访问-->
+                /user/readUser = authc,perms[/readUser]  <!--perms表示拥有此权限才能访问-->
+                /user/readBook = authc,perms[/readBook]
+                /user/* = authc
+            </value>
+        </property>
+    </bean>
+    <!--缓存管理器-->
+    <bean id="cacheManager" class="org.apache.shiro.cache.ehcache.EhCacheManager">
+        <!--缓存管理器-->
+        <property name="cacheManager" ref="ehCacheManage"/>
+    </bean>
+    <!--将ehcache交给spring初始化-->
+    <bean id="ehCacheManage" class="org.springframework.cache.ehcache.EhCacheManagerFactoryBean">
+        <property name="configLocation" value="classpath:ehcache.xml"/>
+        <property name="shared" value="true"/>
+    </bean>
+    <!--自定义realm-->
+    <bean id="customRealm" class="com.xiao.shiro.CustomRealm">
+        <!--注入凭证匹配器-->
+        <property name="credentialsMatcher" ref="credentialsMatcher"/>
+    </bean>
+    <!--注册一个凭证匹配器，类型为MD5加密.加密次数为1次-->
+    <bean id="credentialsMatcher" class="org.apache.shiro.authc.credential.HashedCredentialsMatcher">
+        <property name="hashAlgorithmName" value="md5"/>
+        <property name="hashIterations" value="1"/>
+    </bean>
+</beans>
